@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网站图片下载器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .status-text {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .results {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .folder-link {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .folder-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .folder-link a:hover {
+            text-decoration: underline;
+        }
+
+        .history {
+            margin-top: 30px;
+        }
+
+        .history h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: #e9ecef;
+        }
+
+        .history-item .url {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .history-item .info {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .folders {
+            margin-top: 30px;
+        }
+
+        .folders h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .folders-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .folder-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .folder-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .folder-card h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .folder-card p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .files-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .files-modal.show {
+            display: flex;
+        }
+
+        .files-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .files-content h3 {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .file-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .file-item:hover {
+            background: #e9ecef;
+        }
+
+        .file-item img {
+            max-width: 100%;
+            max-height: 100px;
+            object-fit: contain;
+            margin-bottom: 5px;
+        }
+
+        .file-item span {
+            display: block;
+            font-size: 0.8em;
+            color: #666;
+            word-break: break-all;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .input-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖼️ 网站图片下载器</h1>
+            <p>输入网站URL，一键下载所有图片</p>
+        </div>
+
+        <div class="card">
+            <div class="input-group">
+                <input type="text" id="urlInput" placeholder="请输入网站URL，例如：https://example.com">
+                <button class="btn" onclick="downloadImages()" id="downloadBtn">开始下载</button>
+            </div>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="status-text" id="statusText">正在处理...</div>
+            </div>
+
+            <div class="results" id="results">
+                <div class="result-card">
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="successCount">0</div>
+                            <div class="stat-label">成功</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="failedCount">0</div>
+                            <div class="stat-label">失败</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalCount">0</div>
+                            <div class="stat-label">总计</div>
+                        </div>
+                    </div>
+                    <div class="folder-link">
+                        <strong>文件夹：</strong>
+                        <span id="folderName">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card folders">
+            <h3>📁 下载文件夹</h3>
+            <div class="folders-list" id="foldersList">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                        <polyline points="13 2 13 9 20 9"></polyline>
+                    </svg>
+                    <p>暂无下载记录</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card history">
+            <h3>📋 下载历史</h3>
+            <div class="history-list" id="historyList">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <p>暂无历史记录</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="files-modal" id="filesModal">
+        <div class="files-content">
+            <h3>
+                <span id="modalTitle">文件夹</span>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </h3>
+            <div class="files-grid" id="filesGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时获取历史记录和文件夹列表
+        window.onload = function() {
+            loadHistory();
+            loadFolders();
+        };
+
+        async function downloadImages() {
+            const url = document.getElementById('urlInput').value.trim();
+
+            if (!url) {
+                alert('请输入网站URL');
+                return;
+            }
+
+            const btn = document.getElementById('downloadBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const statusText = document.getElementById('statusText');
+            const results = document.getElementById('results');
+
+            // 显示进度
+            btn.disabled = true;
+            btn.textContent = '下载中...';
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '30%';
+            statusText.textContent = '正在访问网站...';
+            results.classList.remove('show');
+
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const result = await response.json();
+
+                progressFill.style.width = '100%';
+
+                if (result.success) {
+                    statusText.textContent = '下载完成！';
+
+                    // 显示结果
+                    document.getElementById('successCount').textContent = result.downloaded;
+                    document.getElementById('failedCount').textContent = result.failed;
+                    document.getElementById('totalCount').textContent = result.total;
+                    document.getElementById('folderName').textContent = result.folder_name;
+
+                    results.classList.add('show');
+
+                    // 刷新列表
+                    loadHistory();
+                    loadFolders();
+                } else {
+                    statusText.textContent = '下载失败: ' + result.error;
+                }
+            } catch (error) {
+                statusText.textContent = '下载失败: ' + error.message;
+            }
+
+            btn.disabled = false;
+            btn.textContent = '开始下载';
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const history = await response.json();
+
+                const historyList = document.getElementById('historyList');
+
+                if (history.length === 0) {
+                    historyList.innerHTML = `
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <p>暂无历史记录</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                historyList.innerHTML = history.map(item => `
+                    <div class="history-item">
+                        <div class="url">${item.url}</div>
+                        <div class="info">
+                            ✅ ${item.downloaded} / ❌ ${item.failed} / 📊 ${item.total} | 🕐 ${item.time}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+            }
+        }
+
+        async function loadFolders() {
+            try {
+                const response = await fetch('/api/folders');
+                const folders = await response.json();
+
+                const foldersList = document.getElementById('foldersList');
+
+                if (folders.length === 0) {
+                    foldersList.innerHTML = `
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                <polyline points="13 2 13 9 20 9"></polyline>
+                            </svg>
+                            <p>暂无下载记录</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                foldersList.innerHTML = folders.map(folder => `
+                    <div class="folder-card" onclick="showFolderFiles('${folder.name}')">
+                        <h4>${folder.name}</h4>
+                        <p>${folder.file_count} 个文件</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('加载文件夹列表失败:', error);
+            }
+        }
+
+        async function showFolderFiles(folderName) {
+            try {
+                const response = await fetch(`/api/folder/${folderName}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert('加载失败: ' + data.error);
+                    return;
+                }
+
+                document.getElementById('modalTitle').textContent = folderName;
+
+                const filesGrid = document.getElementById('filesGrid');
+                filesGrid.innerHTML = data.files.map(file => `
+                    <div class="file-item" onclick="window.open('${file.url}', '_blank')">
+                        <img src="${file.url}" alt="${file.name}" onerror="this.style.display='none'">
+                        <span>${file.name}</span>
+                    </div>
+                `).join('');
+
+                document.getElementById('filesModal').classList.add('show');
+            } catch (error) {
+                alert('加载失败: ' + error.message);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('filesModal').classList.remove('show');
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('filesModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // 回车键触发下载
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                downloadImages();
+            }
+        });
+    </script>
+</body>
+</html>
