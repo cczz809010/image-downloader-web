@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: image-downloader-web
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 server.py
+    envVars:
+      - key: PORT
+        value: 10000
+    disk:
+      name: downloads
+      mountPath: /tmp/downloads
+      sizeGB: 1
