@@ -1,0 +1,9 @@
+{
+  "envId": "{{envId}}",
+  "version": "2.0",
+  "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/latest.json",
+  "framework": {
+    "name": "image-downloader-web",
+    "plugins": {}
+  }
+}

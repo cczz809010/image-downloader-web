@@ -1,0 +1,19 @@
+service: image-downloader-web
+
+provider:
+  name: tencent
+  runtime: Python3.9
+  region: ap-guangzhou
+
+functions:
+  app:
+    handler: app.main
+    events:
+      - apigw:
+          path: /
+          method: ANY
+      - apigw:
+          path: /{proxy+}
+          method: ANY
+    timeout: 60
+    memorySize: 512

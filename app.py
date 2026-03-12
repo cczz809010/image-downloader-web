@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-网站图片下载器 - Web版本
+网站图片下载器 - CloudBase Serverless版本
 """
 
 import os
@@ -16,10 +16,10 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 app = Flask(__name__)
 
 # 配置
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
+UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/tmp/downloads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# 下载历史
+# 下载历史（使用临时存储，生产环境建议使用数据库）
 DOWNLOAD_HISTORY = []
 
 
@@ -80,12 +80,13 @@ class ImageDownloader:
                     if ImageDownloader._is_valid_image(match):
                         image_urls.add(match)
 
-            # 下载图片
+            # 下载图片（限制最多下载50张，避免超时）
             results = []
             downloaded = 0
             failed = 0
+            max_images = 50
 
-            for index, img_url in enumerate(image_urls, 1):
+            for index, img_url in enumerate(list(image_urls)[:max_images], 1):
                 try:
                     if not img_url.startswith('http'):
                         img_url = urljoin(url, img_url)
@@ -133,14 +134,14 @@ class ImageDownloader:
                     })
                     failed += 1
 
-                time.sleep(0.1)
+                time.sleep(0.05)  # 减少延迟，加快下载速度
 
             return {
                 'success': True,
                 'folder_name': folder_name,
                 'downloaded': downloaded,
                 'failed': failed,
-                'total': len(image_urls),
+                'total': min(len(image_urls), max_images),
                 'results': results
             }
 
@@ -184,8 +185,8 @@ def download():
         }
         DOWNLOAD_HISTORY.insert(0, history_item)
 
-        # 只保留最近10条记录
-        if len(DOWNLOAD_HISTORY) > 10:
+        # 只保留最近5条记录
+        if len(DOWNLOAD_HISTORY) > 5:
             DOWNLOAD_HISTORY.pop()
 
     return jsonify(result)
@@ -199,15 +200,18 @@ def get_history():
 @app.route('/api/folders')
 def get_folders():
     folders = []
-    for item in os.listdir(UPLOAD_FOLDER):
-        folder_path = os.path.join(UPLOAD_FOLDER, item)
-        if os.path.isdir(folder_path):
-            files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
-            folders.append({
-                'name': item,
-                'file_count': len(files)
-            })
-    folders.sort(key=lambda x: x['name'], reverse=True)
+    try:
+        for item in os.listdir(UPLOAD_FOLDER):
+            folder_path = os.path.join(UPLOAD_FOLDER, item)
+            if os.path.isdir(folder_path):
+                files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
+                folders.append({
+                    'name': item,
+                    'file_count': len(files)
+                })
+        folders.sort(key=lambda x: x['name'], reverse=True)
+    except Exception as e:
+        pass
     return jsonify(folders)
 
 
@@ -235,42 +239,16 @@ def download_file(folder_name, filename):
     return send_from_directory(os.path.join(UPLOAD_FOLDER, folder_name), filename)
 
 
-@app.route('/api/folder/<folder_name>/zip', methods=['GET'])
-def download_zip(folder_name):
-    try:
-        import zipfile
-        import io
-
-        folder_path = os.path.join(UPLOAD_FOLDER, folder_name)
-        if not os.path.exists(folder_path):
-            return jsonify({'success': False, 'error': '文件夹不存在'})
-
-        # 创建ZIP文件
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for filename in os.listdir(folder_path):
-                filepath = os.path.join(folder_path, filename)
-                if os.path.isfile(filepath):
-                    zip_file.write(filepath, filename)
-
-        zip_buffer.seek(0)
-
-        return send_from_directory(
-            UPLOAD_FOLDER,
-            folder_name + '.zip',
-            mimetype='application/zip',
-            as_attachment=True
-        )
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+# CloudBase 入口函数
+def main_handler(event, context):
+    return app(event, context)
 
 
 if __name__ == '__main__':
     print("\n" + "=" * 60)
-    print("  🌐 网站图片下载器 - Web版")
+    print("  🌐 网站图片下载器 - CloudBase版")
     print("=" * 60)
-    print(f"  访问地址: http://localhost:8888")
+    print(f"  本地测试地址: http://localhost:8888")
     print(f"  下载目录: {UPLOAD_FOLDER}")
     print("=" * 60 + "\n")
 
